@@ -19,3 +19,19 @@ export const ChatMessageModelSchema = z.object({
 });
 
 export type ChatMessageModel = z.infer<typeof ChatMessageModelSchema>;
+
+export const ChatResponseEventSchema = z.object({
+  type: z
+    .enum([
+      "functionCall",
+      "functionCallResult",
+      "content",
+      "abort",
+      "error",
+      "finalContent",
+    ])
+    .describe("The type of the chat response event."),
+  response: z.string().describe("The response of the chat response event."),
+});
+
+export type ChatResponseEvent = z.infer<typeof ChatResponseEventSchema>;
