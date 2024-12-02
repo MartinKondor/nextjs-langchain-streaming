@@ -1,11 +1,11 @@
-import { HumanMessage } from "@langchain/core/messages";
-import { getDefaultModel, getLangChainModel } from "@/app/lib/llm-config";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
-  console.log("POST /api/stream");
-  console.log(request.body);
+import { getDefaultModel, getLangChainModel } from "@/app/lib/llm-config";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 
+const encoder = new TextEncoder();
+
+export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const content = JSON.parse(formData.get("content") as string) as {
     id: string;
@@ -17,23 +17,50 @@ export async function POST(request: NextRequest) {
   }
 
   const model = getLangChainModel(getDefaultModel());
-  const messages = [new HumanMessage(content.message)];
-
-  const stream = await model.stream(messages, {
-    signal: request.signal,
-    callbacks: [
-      {
-        handleLLMStart: () => {
-          console.log("Start streaming:", new Date().toISOString());
-        },
-        handleLLMEnd: (output: any) => {
-          console.log("End streaming:", new Date().toISOString());
-        },
-      },
+  const prompt = ChatPromptTemplate.fromMessages([
+    [
+      "system",
+      `You are a helpful assistant. Use the tools provided to best assist the user.`,
     ],
-  });
-  return new NextResponse(stream, {
-    status: 200,
+    ["human", content.message],
+  ]);
+
+  const stream = new TransformStream();
+  const writer = stream.writable.getWriter();
+  const encoder = new TextEncoder();
+  const chain = prompt.pipe(model);
+
+  (async () => {
+    try {
+      const llmStream = await chain.stream({
+        signal: request.signal,
+        callbacks: [
+          {
+            handleLLMStart: () => {
+              console.log("Start streaming:", new Date().toISOString());
+            },
+            handleLLMEnd: async (output: any) => {
+              console.log("End streaming:", new Date().toISOString());
+            },
+            handleLLMError: async (error: Error) => {
+              console.error("Streaming error:", error);
+            },
+          },
+        ],
+      });
+
+      for await (const chunk of llmStream) {
+        console.log("Chunk:", chunk);
+        await writer.write(encoder.encode(JSON.stringify(chunk)));
+      }
+    } catch (error) {
+      console.error("Stream error:", error);
+    } finally {
+      await writer.close();
+    }
+  })();
+
+  return new NextResponse(stream.readable, {
     headers: {
       "Content-Type": "text/event-stream",
       Connection: "keep-alive",

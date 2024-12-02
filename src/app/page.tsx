@@ -1,23 +1,22 @@
 "use client";
 
+import { MessageCircle, PlayCircle } from "lucide-react";
 import { useState } from "react";
-import { PlayCircle, MessageCircle } from "lucide-react";
-import { StringOutputParser } from "@langchain/core/output_parsers";
+
+import { CustomEventParser } from "./lib/custom-parser";
+import { ChatMessageModel } from "./lib/types";
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [llmOutput, setLlmOutput] = useState<string>(
-    "<LLM's response will appear here>"
-  );
+  const [message, setMessage] = useState<ChatMessageModel | undefined>();
   const controller = new AbortController();
 
   const handleStart = async () => {
     setIsLoading(true);
-    setLlmOutput("");
+    setMessage(undefined);
 
     try {
-      // Create a mock form data
       const formData = new FormData();
-
       const body = JSON.stringify({
         id: "1",
         message:
@@ -35,17 +34,22 @@ export default function Home() {
         throw new Error("Failed to fetch");
       }
 
-      const parser = new StringOutputParser();
+      const parser = new CustomEventParser("default-thread", "Assistant");
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let done = false;
+
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
 
-        const chunkValue = decoder.decode(value);
-        const parsed = await parser.invoke(chunkValue);
-        setLlmOutput((prev) => prev + parsed);
+        if (value) {
+          try {
+            const chunkValue = decoder.decode(value);
+            const parsed = await parser.parse(chunkValue);
+            setMessage(parsed);
+          } catch (error) {}
+        }
       }
     } catch (error) {
       console.error("Error:", error);
@@ -76,10 +80,18 @@ export default function Home() {
         </button>
       </div>
       <div className="max-w-[450px]">
-        <div className="text-gray-500 font-semibold text-xl mt-16 flex items-center gap-2">
-          <MessageCircle className="w-5 h-5" />
-          <br />
-          <p>{llmOutput}</p>
+        <div className="text-gray-500 font-semibold text-xl mt-16 flex flex-col gap-4">
+          {message && (
+            <div className="flex items-start gap-2">
+              <MessageCircle className="w-5 h-5 mt-1" />
+              <div>
+                <div className="text-sm text-gray-400">{message.role}</div>
+                <p>{message.content}</p>
+                <br />
+                <pre>{JSON.stringify(message, null, 2)}</pre>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </main>
