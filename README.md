@@ -1,5 +1,9 @@
 # Next.js LangChain POC
 
+<p align="center">
+    <img src="docs/readme.png" alt="Screenshot" width="900" />
+</p>
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
