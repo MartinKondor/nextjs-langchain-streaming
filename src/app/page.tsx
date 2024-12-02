@@ -1,24 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { PlayCircle } from "lucide-react";
-
+import { PlayCircle, MessageCircle } from "lucide-react";
+import { StringOutputParser } from "@langchain/core/output_parsers";
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [llmOutput, setLlmOutput] = useState<string>(
+    "<LLM's response will appear here>"
+  );
+  const controller = new AbortController();
 
   const handleStart = async () => {
     setIsLoading(true);
+    setLlmOutput("");
 
     try {
-      // TODO: Implement streaming
-      /* 
-      const response = await fetch('/stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // Create a mock form data
+      const formData = new FormData();
+
+      const body = JSON.stringify({
+        id: "1",
+        message:
+          "Hey! Please tell me 5 jokes about animals. Ensure they're funny and child-friendly.",
       });
-      */
+      formData.append("content", body);
+
+      const response = await fetch("/api/stream", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to fetch");
+      }
+
+      const parser = new StringOutputParser();
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+
+        const chunkValue = decoder.decode(value);
+        const parsed = await parser.invoke(chunkValue);
+        setLlmOutput((prev) => prev + parsed);
+      }
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -46,6 +74,13 @@ export default function Home() {
           <PlayCircle className="w-5 h-5" />
           {isLoading ? "Processing..." : "Start"}
         </button>
+      </div>
+      <div className="max-w-[450px]">
+        <div className="text-gray-500 font-semibold text-xl mt-16 flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          <br />
+          <p>{llmOutput}</p>
+        </div>
       </div>
     </main>
   );
