@@ -5,7 +5,7 @@ import {
 } from "@langchain/core/messages";
 import { AzureChatOpenAI } from "@langchain/openai";
 import { env } from "../env";
-import { ChatMessageModelSchema } from "./types";
+import { ChatResponseEventSchema } from "./types";
 
 export const getDefaultModel = () =>
   env.DEFAULT_LLM ?? env.AZURE_OPENAI_API_DEPLOYMENT_NAME ?? "gpt-4o";
@@ -21,7 +21,7 @@ export const getLangChainModel = (modelId: string) => {
     azureOpenAIApiDeploymentName: env.AZURE_OPENAI_API_DEPLOYMENT_NAME,
     azureOpenAIApiVersion: env.AZURE_OPENAI_API_VERSION,
   });
-  return model.withStructuredOutput(ChatMessageModelSchema);
+  return model.withStructuredOutput(ChatResponseEventSchema);
 };
 
 export type LangChainMessage = HumanMessage | SystemMessage | AIMessage;

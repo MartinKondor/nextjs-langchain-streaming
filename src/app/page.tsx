@@ -8,7 +8,7 @@ import { ChatMessageModel } from "./lib/types";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [message, setMessage] = useState<ChatMessageModel | undefined>();
+  const [message, setMessage] = useState<string | undefined>();
   const controller = new AbortController();
 
   const handleStart = async () => {
@@ -47,7 +47,7 @@ export default function Home() {
           try {
             const chunkValue = decoder.decode(value);
             const parsed = await parser.parse(chunkValue);
-            setMessage(parsed);
+            setMessage(parsed.response);
           } catch (error) {}
         }
       }
@@ -85,10 +85,7 @@ export default function Home() {
             <div className="flex items-start gap-2">
               <MessageCircle className="w-5 h-5 mt-1" />
               <div>
-                <div className="text-sm text-gray-400">{message.role}</div>
-                <p>{message.content}</p>
-                <br />
-                <pre>{JSON.stringify(message, null, 2)}</pre>
+                <p>{message}</p>
               </div>
             </div>
           )}

@@ -1,19 +1,8 @@
 import { BaseOutputParser } from "@langchain/core/output_parsers";
 
-import { ChatMessageModel } from "./types";
+import { ChatResponseEvent } from "./types";
 
-export type ParsedEventType = {
-  type:
-    | "functionCall"
-    | "functionCallResult"
-    | "content"
-    | "abort"
-    | "error"
-    | "finalContent";
-  response: ChatMessageModel;
-};
-
-export class CustomEventParser extends BaseOutputParser<ChatMessageModel> {
+export class CustomEventParser extends BaseOutputParser<ChatResponseEvent> {
   private chatThreadId: string;
   private appName: string;
 
@@ -29,9 +18,23 @@ export class CustomEventParser extends BaseOutputParser<ChatMessageModel> {
     return "Format as JSON with type and response fields.";
   }
 
-  async parse(text: string): Promise<ChatMessageModel> {
-    // TODO: Return events (ParsedEventType) instead of the chat message model
-    const event = JSON.parse(text) as ChatMessageModel;
+  async parse(text: string): Promise<ChatResponseEvent> {
+    const event = JSON.parse(text) as ChatResponseEvent;
+
+    switch (event.type) {
+      case "abort":
+        console.warn("Abort event received");
+        break;
+      case "error":
+        console.error("Error event received");
+        break;
+      case "finalContent":
+        console.log("Final content event received");
+        break;
+      default:
+        break;
+    }
+
     return event;
   }
 }
